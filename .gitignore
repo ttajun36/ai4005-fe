@@ -45,3 +45,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Pod related
+ios/Pods/
+ios/Podfile.lock
+macos/Pods/
+macos/Podfile.lock
