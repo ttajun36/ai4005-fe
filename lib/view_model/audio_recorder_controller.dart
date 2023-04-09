@@ -68,12 +68,6 @@ class AudioRecorderController {
         });
       }
 
-      Message a = Message(role: "taejun", content: "um");
-      Message b = Message(role: "yoonjae", content: "kim");
-
-      updatedMessageList.add(a);
-      updatedMessageList.add(b);
-
       // Update messageList with updatedMessageList
       messageList = updatedMessageList;
 
