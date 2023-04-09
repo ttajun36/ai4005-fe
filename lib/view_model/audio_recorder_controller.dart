@@ -5,83 +5,95 @@ import 'dart:io';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:http/http.dart' as http;
 
+import '../object/message.dart';
+
 class AudioRecorderController {
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+
   String? _recordingFilePath;
+  List<Message>? messageList = [];
 
   Future<void> startRecording() async {
-    if (_recordingFilePath == null) {
-      await _recorder.openRecorder();
-      await _recorder.startRecorder(toFile: 'temp.wav');
-    } else {
-      await _recorder.resumeRecorder();
-    }
-  }
-
-  Future<void> pauseRecording() async {
-    await _recorder.pauseRecorder();
+    await _recorder.openRecorder();
+    await _recorder.startRecorder(toFile: 'temp.wav');
   }
 
   Future<String?> stopRecording() async {
+    // tempFilePath = /Users/eomtaejun/Library/Developer/CoreSimulator/Devices/8F76A02B-7407-4901-9286-0F7558F271A6/data/Containers/Data/Application/043B08A0-CE37-4FE5-BBCF-BFEBF76056A8/tmp/temp.wav
     String? tempFilePath = await _recorder.stopRecorder();
-    if (tempFilePath != null && tempFilePath.isNotEmpty) {
-      if (_recordingFilePath == null) {
-        _recordingFilePath = tempFilePath;
-      } else {
-        await _appendAudioDataToFile(_recordingFilePath!, tempFilePath);
-      }
-    }
+    _recordingFilePath = tempFilePath;
     await _recorder.closeRecorder();
     return _recordingFilePath;
   }
 
-  Future<bool> sendAudioData(String filePath) async {
+  Future<String> sendAudioData(String filePath) async {
     final audioFileBytes = await File(filePath).readAsBytes();
     final base64AudioFile = base64Encode(audioFileBytes);
+
+    //messageList to Json
+    List<Map<String, String>> messageListJson = messageList
+            ?.map((message) => {
+                  'role': message.role,
+                  'content': message.content,
+                })
+            .toList() ??
+        [];
+
+    print(messageListJson);
 
     final response = await http.post(
       Uri.parse(
           'https://wgmywho6v8.execute-api.ap-northeast-2.amazonaws.com/v1/answer'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'audio': base64AudioFile}),
+      body: jsonEncode({
+        'audio': base64AudioFile,
+        'messages': messageListJson,
+      }),
     );
 
     if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      final audioUrl = jsonResponse['audio_url'];
+      final messageListJson = jsonResponse['messages'];
+      final List<Message> updatedMessageList = [];
+
+      //receive json and update messageList
+      if (messageListJson != null) {
+        messageListJson.forEach((messageJson) {
+          final message = Message(
+            role: messageJson['role'],
+            content: messageJson['content'],
+          );
+          updatedMessageList.add(message);
+        });
+      }
+
+      Message a = Message(role: "taejun", content: "um");
+      Message b = Message(role: "yoonjae", content: "kim");
+
+      updatedMessageList.add(a);
+      updatedMessageList.add(b);
+
+      // Update messageList with updatedMessageList
+      messageList = updatedMessageList;
+
       log(response.body);
-      return true;
+      if (audioUrl == null) {
+        return '';
+      } else {
+        return audioUrl;
+      }
     } else {
       log(response.body);
-      return false;
+      return '';
     }
-  }
-
-  /*  Binary Data 로 SendAudioData 보내기
-   *  Future<bool> sendAudioData(String filePath) async {
-   *    var request = http.MultipartRequest(
-   *        'POST',
-   *        Uri.parse(
-   *            'https://wgmywho6v8.execute-api.ap-northeast-2.amazonaws.com/v1/answer'));
-   *    request.files.add(await http.MultipartFile.fromPath('audio', filePath));
-   *    var response = await request.send();
-   *    if (response.statusCode == 200) {
-   *      print('Audio data successfully sent to API');
-   *      return true;
-   *    } else {
-   *      print('Failed to send audio data to API');
-   *      return false;
-   *    }
-   *  }
-   */
-
-  Future<void> _appendAudioDataToFile(
-      String existingFilePath, String newFilePath) async {
-    File existingFile = File(existingFilePath);
-    File newFile = File(newFilePath);
-    List<int> existingData = await existingFile.readAsBytes();
-    List<int> newData = await newFile.readAsBytes();
-    List<int> combinedData = List<int>.from(existingData)..addAll(newData);
-    await existingFile.writeAsBytes(combinedData);
-    await newFile.delete();
+    // if (response.statusCode == 200) {
+    //   log(response.body);
+    //   return true;
+    // } else {
+    //   log(response.body);
+    //   return false;
+    // }
   }
 
   void dispose() {
