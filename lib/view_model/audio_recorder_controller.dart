@@ -39,6 +39,8 @@ class AudioRecorderController {
             .toList() ??
         [];
 
+    print(messageListJson);
+
     final response = await http.post(
       Uri.parse(
           'https://wgmywho6v8.execute-api.ap-northeast-2.amazonaws.com/v1/answer'),
@@ -50,6 +52,8 @@ class AudioRecorderController {
     );
 
     if (response.statusCode == 200) {
+      print('200is right');
+
       final jsonResponse = jsonDecode(response.body);
       final audioUrl = jsonResponse['audio_url'];
       final messageListJson = jsonResponse['messages'];
@@ -69,6 +73,20 @@ class AudioRecorderController {
       // Update messageList with updatedMessageList
       messageList = updatedMessageList;
 
+      //for test
+      if (messageList != null) {
+        // Convert messageList to JSON string
+        List<Map<String, String>> messageListJson = messageList
+                ?.map((message) => {
+                      'role': message.role,
+                      'content': message.content,
+                    })
+                .toList() ??
+            [];
+
+        print(messageListJson);
+      }
+
       log(response.body);
       if (audioUrl == null) {
         return '';
@@ -76,6 +94,7 @@ class AudioRecorderController {
         return audioUrl;
       }
     } else {
+      print('not 200');
       log(response.body);
       return '';
     }
