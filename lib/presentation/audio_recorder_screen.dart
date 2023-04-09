@@ -32,41 +32,22 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
       });
       String? filePath = await widget.audioRecorderController.stopRecording();
       if (filePath != null) {
-        String audioUrl =
-            await widget.audioRecorderController.sendAudioData(filePath);
+        await widget.audioRecorderController.sendAudioData(filePath);
         // DEBUG: Play audio file
         AudioPlayer audioPlayer = AudioPlayer();
-
-        if (audioUrl != '') {
-          await audioPlayer.setSourceUrl(audioUrl);
-          setState(() {
-            _talkingAI = !_talkingAI;
-          });
-          Duration? duration = await audioPlayer.getDuration();
-          await audioPlayer.play(UrlSource(audioUrl));
-          if (duration != null) {
-            await Future.delayed(duration, () {
-              setState(() {
-                _talkingAI = !_talkingAI;
-                _ableRecording = !_ableRecording;
-              });
+        await audioPlayer.setSourceDeviceFile(filePath);
+        setState(() {
+          _talkingAI = !_talkingAI;
+        });
+        Duration? duration = await audioPlayer.getDuration();
+        await audioPlayer.play(DeviceFileSource(filePath));
+        if (duration != null) {
+          await Future.delayed(duration, () {
+            setState(() {
+              _talkingAI = !_talkingAI;
+              _ableRecording = !_ableRecording;
             });
-          }
-        } else {
-          await audioPlayer.setSourceDeviceFile(filePath);
-          setState(() {
-            _talkingAI = !_talkingAI;
           });
-          Duration? duration = await audioPlayer.getDuration();
-          await audioPlayer.play(DeviceFileSource(filePath));
-          if (duration != null) {
-            await Future.delayed(duration, () {
-              setState(() {
-                _talkingAI = !_talkingAI;
-                _ableRecording = !_ableRecording;
-              });
-            });
-          }
         }
       }
     }
